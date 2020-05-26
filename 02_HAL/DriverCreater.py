@@ -1,0 +1,23 @@
+import os
+
+print("Creat your own Driver\n")
+driver_Name=input("Driver name: ")
+os.mkdir(driver_Name)
+os.chdir('./'+driver_Name)
+f=open(driver_Name+'_register.h','w')
+f.close()
+f=open(driver_Name+'_config.h','w')
+f.close()
+f=open(driver_Name+'_interface.h','w')
+f.close()
+f=open(driver_Name+'_private.h','w')
+f.close()
+f=open(driver_Name+'_program.c','w')
+f.write('#include "'+driver_Name+'_STD_TYPES.h'+'"\n')
+f.write('#include "'+driver_Name+'_BIT_MATH.h'+'"\n'+'\n')
+
+f.write('#include "'+driver_Name+'_register.h'+'"\n')
+f.write('#include "'+driver_Name+'_config.h'+'"\n')
+f.write('#include "'+driver_Name+'_interface.h'+'"\n')
+f.write('#include "'+driver_Name+'_private.h'+'"\n')
+f.close()

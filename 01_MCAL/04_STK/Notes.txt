@@ -1,0 +1,8 @@
+/* e7na mosh 3amlen in NVIC e3ml enable l SYSTICK by software 3shan kan 2ail 3aleh caution enna
+* nel3ab fie el bit die
+* 15<<2 el shift b 2 da ana mosh fahmah la2 */
+
+*  does not change prescaler of systick rennong now if it is already enabled   */
+
+hwa el prescaler lw 8yrnah b function set prescaler die w hwa kan already enabled w bie count mosh hay3ml 7aga wala eh ?
+w tany 7aga hwa once any 7attet pin el enable fie STK b 1 keda hwa bada2 y count?
