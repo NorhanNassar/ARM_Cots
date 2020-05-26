@@ -1,13 +1,4 @@
-1- configure at cfg file da 3ala nhy DMA DMA1 wala DMA2
-2- kan fie hena moshkela ella hya
-/* hanadeha ezay fel handler w hwa fie handler l kol dma w kol channel ha3rf mnene die anhy wa7da ?
- * a3taqd keda b2a die matt3mlsh hena aslan hya tte3ml fie ele hay3mlha configure ynady el handler beta3ha w ynady
- * appNotify feha ya3ny badl ma usart1 handler maslan yb2a die */
 3- momken ne3ml twa functions wa7da btarga3lk anhy flag elle marfo3 w wa7da ttfy el flag elle t2olha ttfeh
 3shan lw sebna el handler l kol module bra7to y3raf fie handller bta3 el DMA bta3to anhy flag ele marfo3 w 3shan y clear el flags ele 3aizha 3ant tare2
 el functions dol
 4- lw 7atet 2ie parameter b qema 8er zero hay3tbrha 1 ya3ny enabled
-
-
-2,3 faaakes
-el mohem el recieve hena lesa matzabtsh nha teshta8al fa me7taga tet3mel w momken be mara tezabty ele konty 3aiza tezabteh feha

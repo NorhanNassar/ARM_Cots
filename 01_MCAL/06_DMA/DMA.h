@@ -61,7 +61,7 @@ typedef struct
 										 * Options: 1-> enabled
 										 * 			0-> disabled 	 */
 	u32 counter;						/* Amount to transfer 				 	 */
-	s32 Direction;						/* Options: DIR_MEM2PRE, DIR_PRE2MEM 		 	 */
+	u32 Direction;						/* Options: DIR_MEM2PRE, DIR_PRE2MEM 		 	 */
 	u32 MemToMem;						/* if you desire to transfer from memory to memory
 	 	 	 	 	 	 	 	 	 	 * Options: 1-> from memory to memory
 	 	 	 	 	 	 	 	 	 	 * 			0-> from peripheral to memory or from memory to peripheral */
@@ -73,7 +73,7 @@ typedef struct
 	 	 	 	 	 	 	 	 	 	 * and it can take more than one like
 	 	 	 	 	 	 	 	 	 	 * TRANSFER_ERROR_INT_EN | TRANSFER_COMPLETE_INT_EN */
 
-	s32 DisableInterrupts;				/* Options: TRANSFER_ERROR_INT_EN, TRANSFER_COMPLETE_INT_EN
+	u32 DisableInterrupts;				/* Options: TRANSFER_ERROR_INT_EN, TRANSFER_COMPLETE_INT_EN
 	 	 	 	 	 	 	 	 	 	 * 			HALF_TRANSFER_INT_EN
 	 	 	 	 	 	 	 	 	 	 * and it can take more than one like
 	 	 	 	 	 	 	 	 	 	 * TRANSFER_ERROR_INT_EN & TRANSFER_COMPLETE_INT_EN */
@@ -91,8 +91,8 @@ typedef struct
 
 #define CMAR	3					/* Memory address 							*/
 
-#define DMA1_t			((DMA1_t volatile * const)DMA_1_BASE_ADDRESS)
-#define DMA2_t			((DMA2_t volatile * const)DMA_2_BASE_ADDRESS)
+#define DMA1			((DMA1_t volatile * const)DMA_1_BASE_ADDRESS)
+#define DMA2			((DMA2_t volatile * const)DMA_2_BASE_ADDRESS)
 
 #define DMA1_INIT		RCC_DMA1
 #define DMA2_INIT		RCC_DMA2
@@ -179,7 +179,7 @@ typedef struct
 
 
 #define DIR_MEM2PRE						 (DIR)
-#define DIR_PRE2MEM						~(DIR)
+#define DIR_PRE2MEM						(u32)(~(DIR))
 
 #define TRANSFER_ERROR_INT_EN			 (TEIE)
 #define TRANSFER_ERROR_INT_DIS			~(TEIE)

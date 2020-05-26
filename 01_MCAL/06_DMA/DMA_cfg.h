@@ -9,7 +9,7 @@
 #define DMA_CFG_H_
 
 /* choose DMA controller DMA1 or DMA2 			*/
-#define DMA_CONTROLLER				DMA1_t
+#define DMA_CONTROLLER				DMA1
 
 
 

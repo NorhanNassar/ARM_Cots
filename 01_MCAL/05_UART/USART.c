@@ -5,17 +5,21 @@
  *      Author: Norhan Nassar
  */
 
-
 #include "STD_TYPES.h"
 #include "GPIO.h"
-#include "USART.h"
-#include "USART_cfg.h"
 #include "RCC.h"
 #include "NVIC.h"
+#include "DMA_cfg.h"
 #include "DMA.h"
+#include "LIN_cfg.h"
+#include "LIN.h"
+#include "USART.h"
+#include "USART_cfg.h"
+#include "Sched.h"
 
-txCbf_t appTxNotify;
-rxCbf_t appRxNotify;
+volatile txCbf_t appTxNotify;
+volatile rxCbf_t appRxNotify;
+volatile breakCbf_t appBreakNotify;
 
 typedef enum
 {
@@ -24,14 +28,19 @@ typedef enum
 } bufferState_t;
 typedef struct
 {
-	u8* ptrToDataBuffer;
+	volatile u8* ptrToDataBuffer;
 	u32 Position;
 	u32 Size;
 	bufferState_t State;
 }dataBuffer_t;
 
+typedef u8 DMAstate_t;
+#define DMA_ideal	0
+#define DMA_busy	1
+
 #define NULL (void*)0
 
+/*------------------------------------------------Macros to Check Input Parameters------------------------------------------------*/
 #define CHECKDATABITS(NUMBER)	((NUMBER== (DATA_BITS_EIGHT) )|(NUMBER== (DATA_BITS_NINE) ))
 #define CHECKPARITY(PARITY)		( (PARITY== (NO_PARITY))|(PARITY== (EVEN_PARITY))|(PARITY== (ODD_PARITY)) )
 #define CHECKNUMSTOP(NUMBER)	( (NUMBER== ONE_STOP_BIT)|(NUMBER== TWO_STOP_BIT)|(NUMBER== ONE_HALF_STOP_BIT)|(NUMBER== HALF_STOP_BIT))
@@ -40,24 +49,32 @@ typedef struct
 #define CHECKDUPLEXT(TYPE)		( (TYPE== FULL_DUPLEX)|(TYPE== HALF_DUPLEX) )
 #define CHECKUSAGEMODE(UMODE)	( (UMODE== INTERRUPT_MODE)|(UMODE== DMA_MODE)|(UMODE== POLLING_MODE) )
 #define CHECKRXMODE(RMODE)		( (RMODE== RX_PIN_INPUT_FLOATING)|(RMODE== RX_PIN_INPUT_PULLUP) )
-#define CHECKTXMODE(TMODE)		( (RMODE== TX_SPEED_2MHZ)|(RMODE== TX_SPEED_10MHZ)|(RMODE== TX_SPEED_50MHZ))
+#define CHECKTXMODE(TMODE)		( (TMODE== TX_SPEED_2MHZ)|(TMODE== TX_SPEED_10MHZ)|(TMODE== TX_SPEED_50MHZ))
+#define CHECKPARAM(BITS,PARITY,STOP,CLK,ERR,DUPLEX,USAGE,RX,TX) (CHECKDATABITS(BITS)&CHECKPARITY(PARITY)&CHECKNUMSTOP(STOP)&CHECKCLKMODE(CLK)&CHECKERRINT(ERR)&CHECKDUPLEXT(DUPLEX)&CHECKUSAGEMODE(USAGE)&CHECKRXMODE(RX)&CHECKTXMODE(TX))
+/*--------------------------------------------------------------------------------------------------------------------------------*/
 
-static dataBuffer_t txBuffer={0};
-static dataBuffer_t rxBuffer={0};
-extern USART_Init_Cfg_t USART_Init_Cfg;
+static volatile dataBuffer_t txBuffer={0};
+static volatile dataBuffer_t rxBuffer={0};
 
-static STD_ERROR USART_SendByInter(u8* bufferData, u32 bytesCount);
-static STD_ERROR USART_SendByDma(u8* bufferData, u32 bytesCount);
+volatile DMAstate_t DMASendState = DMA_ideal;
+volatile DMAstate_t DMAReceiveState = DMA_ideal;
 
-static STD_ERROR USART_RecieveByInter(u8* bufferData, u32 bytesCount);
-static STD_ERROR USART_RecieveByDma(u8* bufferData, u32 bytesCount);
+extern volatile USART_Init_Cfg_t USART_Init_Cfg;
+
+static STD_ERROR USART_SendByInter(volatile u8* bufferData, u32 bytesCount);
+static STD_ERROR USART_SendByDma(volatile u8* bufferData, u32 bytesCount);
+
+static STD_ERROR USART_RecieveByInter(volatile u8* bufferData, u32 bytesCount);
+static STD_ERROR USART_RecieveByDma(volatile u8* bufferData, u32 bytesCount);
 //static STD_ERROR USART_SendByTask(u8* bufferData, u32 bytesCount);
 
 STD_ERROR USART_Init()
 {
 	u32 tempReg;
 	/* Check that arguments at cfg file if there are correct first */
-	if(CHECKDATABITS(USART_Init_Cfg.NumberOfDataBits)&CHECKPARITY(USART_Init_Cfg.ParityBit))
+	if(CHECKPARAM(USART_Init_Cfg.NumberOfDataBits,USART_Init_Cfg.ParityBit,USART_Init_Cfg.NumberOfStopBits,\
+			USART_Init_Cfg.ClockMode,USART_Init_Cfg.ErrorInterrupt,USART_Init_Cfg.TypeOfDuplex,USART_Init_Cfg.UartUsageMode,\
+			USART_Init_Cfg.RxPinModeCfg,USART_Init_Cfg.TXPinSpeedCfg))
 	{
 		/* Enable clock on Port A and USART1 */
 		RCC_SetPort(RCC_GPIOA,ON);						/* Enable Clock on port A  for USART */
@@ -85,6 +102,7 @@ STD_ERROR USART_Init()
 		tempReg = USART1x->CR1;
 
 		tempReg |= USART_Init_Cfg.Enable_Interrupts;
+		tempReg &= DISABLE_TXE_INT;						/* to enable it only when we use it for interrupt mode and when there is data to send */
 
 		if(USART_Init_Cfg.NumberOfDataBits == DATA_BITS_EIGHT)
 			tempReg &= DATA_BITS_EIGHT;
@@ -182,7 +200,7 @@ STD_ERROR USART_Configure(USART_cfg_t* USART_Cfg)
 	return OK;
 }
 
-STD_ERROR USART_Send(u8* bufferData, u32 bytesCount)
+STD_ERROR USART_Send(volatile u8* bufferData, u32 bytesCount)
 {
 	switch(USART_Init_Cfg.UartUsageMode)
 	{
@@ -197,7 +215,7 @@ STD_ERROR USART_Send(u8* bufferData, u32 bytesCount)
 	}
 	return OK;
 }
-STD_ERROR USART_SendByInter(u8* bufferData, u32 bytesCount)
+STD_ERROR USART_SendByInter(volatile u8* bufferData, u32 bytesCount)
 {
 	u32 i;
 	if((txBuffer.State == ideal)&&(bufferData)&&(bytesCount>0))
@@ -212,6 +230,7 @@ STD_ERROR USART_SendByInter(u8* bufferData, u32 bytesCount)
 
 
 		USART1x->DR = txBuffer.ptrToDataBuffer[txBuffer.Position];		/* to make it enter USART handler first time */
+		USART1x->CR1 |= ENABLE_TC_INT;
 		txBuffer.Position++;
 
 		return OK;
@@ -219,37 +238,43 @@ STD_ERROR USART_SendByInter(u8* bufferData, u32 bytesCount)
 	return NOT_OK;
 }
 
-STD_ERROR USART_SendByDma(u8* bufferData, u32 bytesCount)
+STD_ERROR USART_SendByDma(volatile u8* bufferData, u32 bytesCount)
 {
-	DMA_cfg_t DMA_cfg =
+	if(DMASendState == DMA_ideal)
 	{
-			DMA1_t,
-			4,
-			&USART1x->DR,
-			bufferData,
-			PERI_SIZE_8_BITS,
-			MEM_SIZE_8_BITS,
-			0,
-			1,
-			bytesCount,
-			DIR_MEM2PRE,
-			0,
-			0,
-			0,
-			USART_Init_Cfg.EnableDmaInt,
-			USART_Init_Cfg.DisableDmaInt
-	};
+		DMA_cfg_t DMA_cfg =
+		{
+				(u32)DMA1,
+				4,
+				(u32)&USART1x->DR,
+				(u32)bufferData,
+				PERI_SIZE_8_BITS,
+				MEM_SIZE_8_BITS,
+				0,
+				1,
+				bytesCount,
+				DIR_MEM2PRE,
+				0,
+				LOW,
+				0,
+				USART_Init_Cfg.EnableDmaInt,
+				USART_Init_Cfg.DisableDmaInt
+		};
 
-	if(DMA_Configure(&DMA_cfg))
+		if(DMA_Configure(&DMA_cfg))
+			return NOT_OK;
+		DMASendState = DMA_busy;
+
+		if(appTxNotify)
+			DMA_setDma1Ch4Cbf(appTxNotify);
+
+		return OK;
+	}
+	else
 		return NOT_OK;
-
-	if(appTxNotify)
-		DMA_setDma1Ch4Cbf(appTxNotify);
-
-	return OK;
 }
 
-STD_ERROR USART_Recieve(u8* bufferData, u32 bytesCount)
+STD_ERROR USART_Recieve(volatile u8* bufferData, u32 bytesCount)
 {
 	switch(USART_Init_Cfg.UartUsageMode)
 	{
@@ -265,7 +290,7 @@ STD_ERROR USART_Recieve(u8* bufferData, u32 bytesCount)
 	return OK;
 }
 
-STD_ERROR USART_RecieveByInter(u8* bufferData, u32 bytesCount)
+STD_ERROR USART_RecieveByInter(volatile u8* bufferData, u32 bytesCount)
 {
 	if((rxBuffer.State == ideal)&&(bufferData)&&(bytesCount>0))
 	{
@@ -279,66 +304,54 @@ STD_ERROR USART_RecieveByInter(u8* bufferData, u32 bytesCount)
 	return NOT_OK;
 }
 
-STD_ERROR USART_RecieveByDma(u8* bufferData, u32 bytesCount)
+STD_ERROR USART_RecieveByDma(volatile u8* bufferData, u32 bytesCount)
 {
-	DMA_cfg_t DMA_cfg =
+	if(DMAReceiveState == DMA_ideal)
 	{
-			DMA1_t,
-			5,
-			&USART1x->DR,
-			bufferData,
-			PERI_SIZE_8_BITS,
-			MEM_SIZE_8_BITS,
-			0,
-			1,
-			bytesCount,
-			DIR_PRE2MEM,
-			0,
-			0,
-			0,
-			USART_Init_Cfg.EnableDmaInt,
-			USART_Init_Cfg.DisableDmaInt
-	};
+		DMA_cfg_t DMA_cfg =
+		{
+				(u32)DMA1,
+				5,
+				(u32)&USART1x->DR,
+				(u32)bufferData,
+				PERI_SIZE_8_BITS,
+				MEM_SIZE_8_BITS,
+				0,
+				1,
+				bytesCount,
+				DIR_PRE2MEM,
+				0,
+				LOW,
+				0,
+				USART_Init_Cfg.EnableDmaInt,
+				USART_Init_Cfg.DisableDmaInt
+		};
 
-	if(DMA_Configure(&DMA_cfg))
+		if(DMA_Configure(&DMA_cfg))
+			return NOT_OK;
+		DMAReceiveState = DMA_busy;
+
+		if(appRxNotify)
+			DMA_setDma1Ch5Cbf(appRxNotify);
+
+		return OK;
+	}
+	else
 		return NOT_OK;
-
-	if(appRxNotify)
-		DMA_setDma1Ch5Cbf(appRxNotify);
-
-	return OK;
-
 }
 
 void USART1_IRQHandler (void)
 {
 	u32 tempToClear;
-
-	if((USART1x->SR & ((u32)TXE_FLAG) )==TXE_FLAG)
+	/* for LIN Communication protocol */
+	if((USART1x->SR & LBD_FLAG ) == LBD_FLAG)
 	{
-		USART1x->DR = 0x00000000;			/* to clear TXE flag */
-		/* hya ttketb keda 3ady 3shan a3ml clear ll falg wala keda hero7 ykteb asfar aslan ?*/
+		USART1x->SR &= ~(LBD_FLAG);                 /* to clear the flag      */
 
-		if(txBuffer.Position!=txBuffer.Size)
-		{
-			/* There is a data to be sent */
-			USART1x->DR = txBuffer.ptrToDataBuffer[txBuffer.Position];
-			txBuffer.Position++;
-		}
-		else
-		{
-			/* Transmission end */
-			txBuffer.Position =0;
-			txBuffer.Size =0;
-			txBuffer.ptrToDataBuffer =NULL;
-			txBuffer.State = ideal;
-			//USART1->CR1 &= ~(TXEIE_TXE_INT_EN);
-			//USART1x->CR1 &= (~USART_Init_Cfg.Enable_Interrupts);
-			if(appTxNotify)
-				appTxNotify();
-		}
+		if(appBreakNotify)
+			appBreakNotify();
+
 	}
-
 	if((USART1x->SR & RXNE_FLAG ) == RXNE_FLAG)
 	{
 		if(rxBuffer.State == busy)
@@ -358,13 +371,37 @@ void USART1_IRQHandler (void)
 			}
 		}
 		else
-			tempToClear = USART1x->DR;									/* to clear the flag also */
+			tempToClear = USART1x->DR;                  /* to clear the flag also */
 
 	}
 
+	if((USART1x->SR & ((u32)TC_FLAG) )==TC_FLAG)
+	{
+		USART1x->SR &= ~TC_FLAG;
+		if(txBuffer.Position<txBuffer.Size && txBuffer.State == busy)
+		{
+			/* There is a data to be sent */
+			USART1x->DR = txBuffer.ptrToDataBuffer[txBuffer.Position];
+			txBuffer.Position++;
+		}
+		else
+		{
+			/* Transmission end */
+			txBuffer.Position =0;
+			txBuffer.Size =0;
+			txBuffer.ptrToDataBuffer =NULL;
+			txBuffer.State = ideal;
+			USART1x->CR1 &= DISABLE_TC_INT;
+			if(appTxNotify)
+				appTxNotify();
+		}
+	}
+
+
+
 }
 
-STD_ERROR USART_setTxCbf (txCbf_t txCbf)
+STD_ERROR USART_setTxCbf (volatile txCbf_t txCbf)
 {
 	if(txCbf)
 	{
@@ -375,7 +412,7 @@ STD_ERROR USART_setTxCbf (txCbf_t txCbf)
 	return NOT_OK;
 }
 
-STD_ERROR USART_setRxCbf (rxCbf_t rxCbf)
+STD_ERROR USART_setRxCbf (volatile rxCbf_t rxCbf)
 {
 	if(rxCbf)
 	{
@@ -384,6 +421,31 @@ STD_ERROR USART_setRxCbf (rxCbf_t rxCbf)
 	}
 
 	return NOT_OK;
+}
+
+STD_ERROR USART_setBreakCbf (volatile breakCbf_t breakCbf)
+{
+	if(breakCbf)
+	{
+		appBreakNotify = breakCbf;
+		return OK;
+	}
+
+	return NOT_OK;
+}
+
+STD_ERROR USART_LIN_Init()
+{
+	/* Init your UART Communication to be used for LIN Communication 												 */
+	USART1x->CR3 &= ~ (HD_SEL);									/* These bits must be cleared 						 */
+	USART1x->CR3 &= ~ (SC_EN | IR_EN);
+
+	USART1x->CR1 &= DATA_BITS_EIGHT;
+	USART1x->CR2 &= ~(STOP_BITS_CLEAR);
+	USART1x->CR2 &= ~ (CLK_EN);					/* some bits must be cleared for LIN communication					 */
+	USART1x->CR2 |= LIN_EN;						/* for Enable LIN communication 									 */
+	USART1x->CR2 |= LBDIE;						/* for Enable Break detection interrupt								 */
+	return OK;
 }
 
 

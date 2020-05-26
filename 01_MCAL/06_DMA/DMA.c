@@ -10,7 +10,7 @@
 #include "NVIC.h"
 #include "GPIO.h"
 #include "DMA.h"
-#include "DMA.h"
+#include "DMA_cfg.h"
 
 Dma1Ch1Cbf_t Dma1Ch1AppNotify;
 Dma1Ch2Cbf_t Dma1Ch2AppNotify;
@@ -25,12 +25,18 @@ Dma2Ch2Cbf_t Dma2Ch2AppNotify;
 Dma2Ch3Cbf_t Dma2Ch3AppNotify;
 Dma2Ch4Cbf_t Dma2Ch4AppNotify;
 
+typedef u8 DMAstate_t;
+#define DMA_ideal	0
+#define DMA_busy	1
+
+extern volatile DMAstate_t DMASendState;
+extern volatile DMAstate_t DMAReceiveState;
+
 STD_ERROR DMA_Init()
 {
-	/* momken yb2a fie 7aga t concatenate el DMA_CONTROOLLER 2ablha y7ot RCC_ */
-	if(DMA_CONTROLLER == DMA1_t)
+	if(DMA_CONTROLLER == (DMA1_t volatile * const)DMA1)
 		return RCC_EnablePeri(RCC_DMA1);
-	if(DMA_CONTROLLER == DMA2_t)
+	if(DMA_CONTROLLER == (DMA1_t volatile * const)DMA2)
 		return RCC_EnablePeri(RCC_DMA2);
 	return NOT_OK;
 }
@@ -38,7 +44,7 @@ STD_ERROR DMA_Init()
 STD_ERROR DMA_Configure(DMA_cfg_t* DMA_cfg)
 {
 	/*--------------Disable channel first to be able to configure it--------------*/
-	DMA_CONTROLLER->CH[DMA_cfg->ChannelNum][CCR] &= ~(EN_CH);
+	DMA_CONTROLLER->CH[DMA_cfg->ChannelNum-1][CCR] &= ~(EN_CH);
 
 	/*---------------------Set Peripheral and Memory Addresses-------------------*/
 	DMA_CONTROLLER->CH[(DMA_cfg->ChannelNum-1)][CPAR] = DMA_cfg->PerAdd;
@@ -69,12 +75,12 @@ STD_ERROR DMA_Configure(DMA_cfg_t* DMA_cfg)
 	/*---------------Configure MemorySize and PeripheralSize---------------------*/
 	DMA_CONTROLLER->CH[(DMA_cfg->ChannelNum-1)][CCR] &= ~(MSIZE_CLEAR);
 	DMA_CONTROLLER->CH[(DMA_cfg->ChannelNum-1)][CCR] &= ~(PSIZE_CLEAR);
-	DMA_CONTROLLER->CH[(DMA_cfg->ChannelNum-1)][CCR] |= DMA_cfg->MemSize;			/* el mafro hena ne3ml macro yt2aked enna men el options el awel */
+	DMA_CONTROLLER->CH[(DMA_cfg->ChannelNum-1)][CCR] |= DMA_cfg->MemSize;
 	DMA_CONTROLLER->CH[(DMA_cfg->ChannelNum-1)][CCR] |= DMA_cfg->PerSize;
 
 	/*------------------------Configure Interrupts-------------------------------*/
 	DMA_CONTROLLER->CH[(DMA_cfg->ChannelNum-1)][CCR] |= DMA_cfg->EnableInterrupts;
-	DMA_CONTROLLER->CH[(DMA_cfg->ChannelNum-1)][CCR] &= ~(DMA_cfg->DisableInterrupts);	/* el mafrod hena yb2a fie macro e check bardo */
+	DMA_CONTROLLER->CH[(DMA_cfg->ChannelNum-1)][CCR] &= ~(DMA_cfg->DisableInterrupts);
 
 	/*-----------Configure Mem2Mem bit and Circular Mode-------------------------*/
 	if(!DMA_cfg->CircularMode)
@@ -212,13 +218,17 @@ void DMA1_Channel3_IRQHandler(void)
 }
 void DMA1_Channel4_IRQHandler(void)
 {
+	DMA1->IFCR |= CGIF1<<12 ;			/* to clear all flags */
+	DMASendState = DMA_ideal;
 	if(Dma1Ch4AppNotify)
 		Dma1Ch4AppNotify();
 }
 
 void DMA1_Channel5_IRQHandler(void)
 {
-	GPIO_voidWrite(PORTC , GPIO_PIN13 , SET);
+	DMA1->IFCR |= CGIF1<<16 ;			/* to clear all flags */
+	DMAReceiveState = DMA_ideal;
+
 	if(Dma1Ch5AppNotify)
 		Dma1Ch5AppNotify();
 }
@@ -250,7 +260,7 @@ void DMA2_Channel2_IRQHandler(void)
 void DMA2_Channel3_IRQHandler(void)
 {
 	if(Dma2Ch3AppNotify)
-		Dma1C31AppNotify();
+		Dma1Ch3AppNotify();
 }
 
 void DMA2_Channel4_5_IRQHandler(void)

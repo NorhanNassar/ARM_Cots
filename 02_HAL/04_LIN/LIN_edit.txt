@@ -1,3 +1,2 @@
 /* LBDL die ele bet5tar hwa 10 bits wala 11 mosh ha7otha hena ya3ny hasbha by default w ma3rafsh da sa7 wala la2 */
-	/* Keda mosh ba2y 8er ele bt send el break w die el mafrod lma agy ab3at el header 			 */
 1- hal die el mafrod a3mel feha 7aga walla la2 

@@ -26,34 +26,34 @@ typedef struct
 
 typedef struct
 {
-	s16 BaudRate; 				/**/
-	s16 NumberOfDataBits;		/* Options: DATA_BITS_EIGHT, or DATA_BITS_NINE 				*/
-	s16	ParityBit;				/* Options: NO_PARITY, EVEN_PARITY, ODD_PARITY 				*/
-	s16 Enable_Interrupts;		/* Options: ENABLE_PARITY_INT, ENABLE_TC_INT, ENABLE_TXE_INT,
+	u16 BaudRate; 				/**/
+	u16 NumberOfDataBits;		/* Options: DATA_BITS_EIGHT, or DATA_BITS_NINE 				*/
+	u16	ParityBit;				/* Options: NO_PARITY, EVEN_PARITY, ODD_PARITY 				*/
+	u16 Enable_Interrupts;		/* Options: ENABLE_PARITY_INT, ENABLE_TC_INT, ENABLE_TXE_INT,
 											ENABLE_RXNE_INT, ENABLE_IDLE_INT, NO_INT_ENABLED
 									Enter here all interrupts you want to enable like:
 									ENABLE_PARITY_INT | ENABLE_TC_INT and so on for all
 									interrupts you want to be enabled						*/
-	s16 Disable_Interrupts;		/* Options: DISABLE_PARITY_INT, DISABLE_TC_INT, DISABLE_TXE_INT,
+	u16 Disable_Interrupts;		/* Options: DISABLE_PARITY_INT, DISABLE_TC_INT, DISABLE_TXE_INT,
 	 	 	 	 	 	 	 	 	 	 	DISABLE_RXNE_INT, DISABLE_IDLE_INT, NO_INT_DIABLED
 	 	 	 	 	 	 	 	   Enter here all interrupts you want to disable like:
 								   Disable_PARITY_INT & ENABLE_TC_INT and so on for all
 						       	   interrupts you want to be disabled						*/
-	s16 NumberOfStopBits;		/* Options:	ONE_STOP_BIT, TWO_STOP_BIT, ONE_HALF_STOP_BIT,
+	u16 NumberOfStopBits;		/* Options:	ONE_STOP_BIT, TWO_STOP_BIT, ONE_HALF_STOP_BIT,
 											HALF_STOP_BIT									*/
-	s16 ClockMode;				/* Options: ASYNCHRONOUS, SYNCHRONOUS						*/
-	s16 ErrorInterrupt;			/* Options: ENABLE_ERROR_INT, DISABLE_ERROR_INT				*/
-	s16 TypeOfDuplex;			/* Options: HALF_DUPLEX, FULL_DUPLEX						*/
-	s16 UartUsageMode;			/* Options: INTERRUPT_MODE, DMA_MODE, POLLING_MODE			*/
-	s16 RxPinModeCfg;			/* Options: RX_PIN_INPUT_FLOATING, RX_PIN_INPUT_PULLUP		*/
-	s16 TXPinSpeedCfg;			/* Options: TX_SPEED_10MHZ, TX_SPEED_2MHZ, TX_SPEED_50MHZ	*/
-	s16 EnableDmaInt;			/* Options: TRANSFER_COMPLETE_INT_EN,TRANSFER_COMPLETE_INT_EN
+	u16 ClockMode;				/* Options: ASYNCHRONOUS, SYNCHRONOUS						*/
+	u16 ErrorInterrupt;			/* Options: ENABLE_ERROR_INT, DISABLE_ERROR_INT				*/
+	u16 TypeOfDuplex;			/* Options: HALF_DUPLEX, FULL_DUPLEX						*/
+	u16 UartUsageMode;			/* Options: INTERRUPT_MODE, DMA_MODE, POLLING_MODE			*/
+	u16 RxPinModeCfg;			/* Options: RX_PIN_INPUT_FLOATING, RX_PIN_INPUT_PULLUP		*/
+	u16 TXPinSpeedCfg;			/* Options: TX_SPEED_10MHZ, TX_SPEED_2MHZ, TX_SPEED_50MHZ	*/
+	u16 EnableDmaInt;			/* Options: TRANSFER_COMPLETE_INT_EN,TRANSFER_COMPLETE_INT_EN
 								 * HALF_TRANSFER_INT_EN, NO_INT_ENABLED
 								 * Enter here all interrupts you want to enable
 								 * if you use DMA mode
 								 * like: TRANSFER_COMPLETE_INT_EN | TRANSFER_COMPLETE_INT_EN
 								 * and so on for all										*/
-	s16 DisableDmaInt;			/* Options: TRANSFER_COMPLETE_INT_EN,TRANSFER_COMPLETE_INT_EN
+	u16 DisableDmaInt;			/* Options: TRANSFER_COMPLETE_INT_EN,TRANSFER_COMPLETE_INT_EN
 	 	 	 	 	 	 	 	 * HALF_TRANSFER_INT_EN, NO_INT_DISABLED
 	 	 	 	 	 	 	 	 * Enter here all interrupts you want to disable
 	 	 	 	 	 	 	 	 * if you use DMA mode
@@ -63,11 +63,11 @@ typedef struct
 
 typedef struct					/* user can configure these items by calling a function configure */
 {
-	s16 BaudRate; 				/**/
-	s16 NumberOfDataBits;		/* Options: DATA_BITS_EIGHT, or DATA_BITS_NINE 				*/
-	s16	ParityBit;				/* Options: NO_PARITY, EVEN_PARITY, ODD_PARITY 				*/
-	s16 NumberOfStopBits;		/* Options:	ONE_STOP_BIT, TWO_STOP_BIT, ONE_HALF_STOP_BIT,
-												HALF_STOP_BIT									*/
+	u16 BaudRate; 				/**/
+	u16 NumberOfDataBits;		/* Options: DATA_BITS_EIGHT, or DATA_BITS_NINE 				*/
+	u16	ParityBit;				/* Options: NO_PARITY, EVEN_PARITY, ODD_PARITY 				*/
+	u16 NumberOfStopBits;		/* Options:	ONE_STOP_BIT, TWO_STOP_BIT, ONE_HALF_STOP_BIT,
+											HALF_STOP_BIT									*/
 	/* there will be flow control later */
 } USART_cfg_t;
 
@@ -75,6 +75,7 @@ typedef struct					/* user can configure these items by calling a function confi
 
 typedef void (*txCbf_t)(void);
 typedef void (*rxCbf_t)(void);
+typedef void (*breakCbf_t)(void);
 
 #define USART_BASE_ADDRESS				(void*)0x40013800
 #define USART1x 						((USARTx volatile * const)USART_BASE_ADDRESS)
@@ -201,35 +202,35 @@ typedef void (*rxCbf_t)(void);
  	 	 	 	 	 	 	 	 	 	 	 	 	 * and FE=1 or ORE=1 or NE=1 in the USART_SR register					*/
 
 /*-------------------------------------For configuration------------------------------------------*/
-#define DATA_BITS_EIGHT					~(M_WORD_LENGTH)
+#define DATA_BITS_EIGHT					(u16)(~(M_WORD_LENGTH))
 #define DATA_BITS_NINE					M_WORD_LENGTH
 
-#define NO_PARITY						~(PCE_PARITY_CONTROL)
+#define NO_PARITY						(u16)(~(PCE_PARITY_CONTROL))
 #define EVEN_PARITY						  0
 #define ODD_PARITY						  1
 
-#define DISABLE_PARITY_INT				~(PEIE_PARITY_INT_EN)
+#define DISABLE_PARITY_INT				(u16)(~(PEIE_PARITY_INT_EN))
 #define ENABLE_PARITY_INT				 PEIE_PARITY_INT_EN
 
-#define DISABLE_TC_INT					~(TCIE_TC_INT)
+#define DISABLE_TC_INT					(u16)(~(TCIE_TC_INT))
 #define ENABLE_TC_INT					TCIE_TC_INT
 
-#define DISABLE_TXE_INT					~(TXEIE_TXE_INT_EN)
+#define DISABLE_TXE_INT					(u16)(~(TXEIE_TXE_INT_EN))
 #define ENABLE_TXE_INT					TXEIE_TXE_INT_EN
 
-#define DISABLE_RXNE_INT				~(RXNEIE_RXNE_INT)
+#define DISABLE_RXNE_INT				(u16)(~(RXNEIE_RXNE_INT))
 #define ENABLE_RXNE_INT					RXNEIE_RXNE_INT
 
-#define DISABLE_IDLE_INT				~(IDLEIE_INT)
+#define DISABLE_IDLE_INT				(u16)(~(IDLEIE_INT))
 #define ENABLE_IDLE_INT					IDLEIE_INT
 
-#define DISABLE_ERROR_INT				~(ERROR_INT_EN)
+#define DISABLE_ERROR_INT				(u16)(~(ERROR_INT_EN))
 #define ENABLE_ERROR_INT				ERROR_INT_EN
 
-#define ASYNCHRONOUS					~(CLK_EN)
+#define ASYNCHRONOUS					(u16)(~(CLK_EN))
 #define SYNCHRONOUS						CLK_EN
 
-#define FULL_DUPLEX						~(HD_SEL)
+#define FULL_DUPLEX						(u16)(~(HD_SEL))
 #define HALF_DUPLEX						HD_SEL
 
 #define RX_PIN_INPUT_FLOATING			MODE_IP_FLOATING
@@ -242,8 +243,8 @@ typedef void (*rxCbf_t)(void);
 #define NO_INT_ENABLED					0x00
 #define NO_INT_DISABLED					0xFFFFFFFF
 
-#define ONE_STOP_BIT					0x2000
-#define TWO_STOP_BIT					0x0000
+#define ONE_STOP_BIT					0x0000
+#define TWO_STOP_BIT					0x2000
 #define ONE_HALF_STOP_BIT				0x3000
 #define HALF_STOP_BIT					0x1000
 
@@ -254,9 +255,11 @@ typedef void (*rxCbf_t)(void);
 /*--------------------------------------Functions Prototypes--------------------------------*/
 extern STD_ERROR USART_Init();
 extern STD_ERROR USART_Configure(USART_cfg_t* USART_cfg);
-extern STD_ERROR USART_Send(u8* bufferData, u32 bytesCount);
-extern STD_ERROR USART_Recieve(u8* bufferData, u32 bytesCount);
+extern STD_ERROR USART_Send(volatile u8* bufferData, u32 bytesCount);
+extern STD_ERROR USART_Recieve(volatile u8* bufferData, u32 bytesCount);
 extern STD_ERROR USART_setTxCbf (txCbf_t txCbf);
 extern STD_ERROR USART_setRxCbf (rxCbf_t rxCbf);
+extern STD_ERROR USART_LIN_Init();					/* This function to init uart configuration to be able to use at LIN protocol */
+extern STD_ERROR USART_setBreakCbf(volatile breakCbf_t breakCbf);
 
 #endif /* USART_H_ */
