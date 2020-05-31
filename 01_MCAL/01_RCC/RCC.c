@@ -1,5 +1,5 @@
 #include "STD_TYPES.h"
-#include "RCC.h"
+#include "RCC_interface.h"
 
 /* Set clock ON or OFF
  * Arguments:
@@ -291,7 +291,12 @@ STD_ERROR RCC_EnablePeri(u32 Peri)
 {
 	if(Peri == RCC_USART1)
 	{
-		RCC->APB2ENR |= RCC_USART1;
+		RCC->APB2ENR |= RCC_USART1;			/* USART1 Peri on APB2 bus */
+		return OK;
+	}
+	else if((Peri == RCC_DMA1)|(Peri == RCC_DMA2))
+	{
+		RCC->AHBENR |= Peri;				/* for DMA1 & DMA2 Peri on AHB bus */
 		return OK;
 	}
 	return NOT_OK;

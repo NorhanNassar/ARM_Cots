@@ -2,8 +2,9 @@
 
 #include "NVIC.h"
 
+
 /* To get Active flag for system exceptions */
- static STD_ERROR SCB_GetActiveFlag(u32 Copy_u32InterruptNum,u8* Copy_PtrActiveStatus)
+static STD_ERROR SCB_GetActiveFlag(u32 Copy_u32InterruptNum,u8* Copy_PtrActiveStatus)
 {
 	switch(Copy_u32InterruptNum)
 	{
@@ -57,21 +58,21 @@ static STD_ERROR SCB_SHCSR_GetPendingFlag(u32 Copy_u32InterruptNum,u8* Copy_PtrP
 {
 	/* If this interrupt is USAGEFAULT, BUSFAULT, MEMMANAGE or SVCALL */
 	switch(Copy_u32InterruptNum)
-		{
-		case SVCALL:
-			*Copy_PtrPendingStatus = (SCBx->ICSR >> 15) &1;
-			break;
-		case MEMMANAGE:
-			*Copy_PtrPendingStatus = (SCBx->ICSR >> 13) &1;
-			break;
-		case BUSFAULT:
-			*Copy_PtrPendingStatus = (SCBx->ICSR >> 14) &1;
-			break;
-		case USAGEFAULT:
-			*Copy_PtrPendingStatus = (SCBx->ICSR >> 12) &1;
-			break;
-		}
-		return OK;
+	{
+	case SVCALL:
+		*Copy_PtrPendingStatus = (SCBx->ICSR >> 15) &1;
+		break;
+	case MEMMANAGE:
+		*Copy_PtrPendingStatus = (SCBx->ICSR >> 13) &1;
+		break;
+	case BUSFAULT:
+		*Copy_PtrPendingStatus = (SCBx->ICSR >> 14) &1;
+		break;
+	case USAGEFAULT:
+		*Copy_PtrPendingStatus = (SCBx->ICSR >> 12) &1;
+		break;
+	}
+	return OK;
 
 }
 /*******************************************************************/
@@ -294,7 +295,7 @@ STD_ERROR NVIC_SetPriority(u32 Copy_u32InterruptNum,u8 Copy_u8SubPriority, u8 Co
 		else
 		{
 			/* Shift it according to how many priority bits each chip has so 8(for the byte)-number of bits
-			* for STM it is 4 bit Priority -> 8-4*/
+			 * for STM it is 4 bit Priority -> 8-4*/
 			NVICx->IPR[Copy_u32InterruptNum] = Copy_u8SubPriority<<(8-PriBits);
 			/* Shift to set preemption according to how many bits each chip has for priority and
 			 * how many bits for priority group you set */
@@ -449,6 +450,20 @@ STD_ERROR NVIC_SoftwareInterrupt(u32 Copy_u8InterruptNum)
 		if(NVICx->STIR == Copy_u8InterruptNum)
 			loc_err = OK;
 	}
+	return loc_err;
+}
+
+STD_ERROR SCB_SoftwareReset(void)
+{
+	STD_ERROR loc_err = NOT_OK;
+
+	/* Priority group is only 3 bits, so you must check that it isn't exceed its limit -> 7 */
+
+	/* The number needed for shift to be in correct region to set the priority group is 7
+	 *  and it equals to the maximum number for priority group that it could be */
+	SCBx->AIRCR = SCB_AIRCR_VECTKEY_MASK | SYS_RESET;
+	loc_err = OK;
+
 	return loc_err;
 }
 

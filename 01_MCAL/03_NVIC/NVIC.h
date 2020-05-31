@@ -98,6 +98,7 @@
 /* You must write this Register Key at SCB_AIRCR to be able to write at it
  * the Interrupt priority grouping field */
 #define SCB_AIRCR_VECTKEY_MASK			0x05FA0000
+#define SYS_RESET						0x04
 /**************************************************/
 /* Mask to enable DIV by zero interrupt */
 #define CCR_DIV_BY_ZERO_TRAP			0x00000010
@@ -296,6 +297,9 @@ extern STD_ERROR SCB_EnableTrapDivByZero();
 /* It disables faulting or halting when the processor executes an SDIV or UDIV instruction with
  * a divisor of 0																			*/
 extern STD_ERROR SCB_DisableTrapDivByZero();
+
+/* It makes a software reset for whole system												*/
+extern STD_ERROR SCB_SoftwareReset(void);
 
 
 /* keda elle ba2y hena

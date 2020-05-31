@@ -112,6 +112,9 @@
 #define RCC_BASE_ADD      				(void*)0x40021000
 
 #define RCC_USART1						0x4000
+#define RCC_DMA1						0x8001
+#define RCC_DMA2						0x8002
+
 typedef struct
 {
 	/* FOR PROCESSOR CLOCK */
